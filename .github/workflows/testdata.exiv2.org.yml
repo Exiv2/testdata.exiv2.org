@@ -1,0 +1,38 @@
+# https://github.com/marketplace/actions/github-pages-action
+
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-20.04
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - name: Checkout team repository
+        uses: actions/checkout@v2
+        with:
+          path: testdata
+
+      - name: Install dependencies
+        run: sudo apt-get install -y git python3
+
+      - name: Clone directory index generator
+        run: |
+          git clone https://gist.github.com/625eb4caeca12c5aa52778a3b4b0adb4.git /tmp/index.gen
+          python3 /tmp/index.gen/generate_directory_index_caddystyle.py -r -v $GITHUB_WORKSPACE/testdata
+
+      - name: Deploy static content for testdata.exiv2.org
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ github.workspace }}/testdata
+          publish_branch: gh-pages
+          cname: testdata.exiv2.org
